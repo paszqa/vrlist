@@ -52,7 +52,12 @@ def getElementFromSite(site, elementName, elementAttributeName, elementAttribute
     html = open(pathToScript+'/temp/temp.html', encoding="utf8", errors='ignore')
     soup = BeautifulSoup(html, 'html.parser')
     #print("Looking for "+elementName+" => "+elementAttributeName+" = "+elementAttribute)
-    lines = soup.find_all(elementName, { elementAttributeName : elementAttribute}) + soup.find_all("a", { "class" : "score-grade"})
+    scoreGrade = soup.find_all("a", { "class" : "score-grade"})
+    print("LEN scoregrade:"+str(len(scoreGrade)))
+    lines = soup.find_all(elementName, { elementAttributeName : elementAttribute}) + scoreGrade
+    print("LEN LINES:"+str(len(lines)))
+    #If not found get this:
+    #class="game-header-store-link badge badge-big"
     #steam = 
     #print(str(steam))
     return lines
@@ -220,6 +225,15 @@ def get_latest_game_news(appid):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
 
+def get_redirect_target(url):
+    try:
+        response = requests.head(url, allow_redirects=True)
+        # Get the final URL after all redirects
+        final_url = response.url
+        return final_url
+    except requests.RequestException as e:
+        return str(e)
+
 
 def printPrices(currentName, inputLines, siteurl):
     print("Printing prices... currentName:"+currentName+"")
@@ -265,11 +279,17 @@ def printPrices(currentName, inputLines, siteurl):
             if "empty" in str(line) and "official" in str(line) and ofiNotFound == 1:
                 officialPrice = "Unavailable"
                 ofiNotFound = 0
-            elif "store.steampowered.com" in str(line):
-                #print("--------1---")
-                #print(line)
-                #print("-------2----")
-                steamId = str(line).split('store.steampowered.com/app/')[1].split('/')[0]
+            elif "store.steampowered.com" in str(line) or ("/redirect/" in str(line) and "View on Steam" in str(line)):
+                if("/redirect/") in str(line):
+                    print("THIS LINE:\n\n\n"+str(line)+"\n\n\n")
+                    redirUrl = str(line).split('href="')[1].split('"')[0]
+                    print("REDIR URL:\n\n\n"+redirUrl+"\n\n\n")
+                    redirect_target = get_redirect_target(redirUrl)
+                    print("target:"+redirect_target)
+                    #redirect_target = get_redirect_target(url)
+                    steamId = redirect_target.split('store.steampowered.com/app/')[1].split('/')[0]
+                else:
+                    steamId = str(line).split('store.steampowered.com/app/')[1].split('/')[0]
                 #NEWS EMPTY, NOT NEEDED
                 newsList = " " #get_latest_game_news(steamId)
                 details = get_game_details(steamId)
