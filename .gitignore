@@ -1,3 +1,7 @@
-temp/*
+/temp/*
+/temp
 temp
+temp/*
+temp/
+/temp/
 *.log

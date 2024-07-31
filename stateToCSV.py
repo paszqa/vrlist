@@ -86,6 +86,11 @@ def main_script():
                 openworld = result_lines[28].strip()
                 storyrich = result_lines[29].strip()
                 adult = result_lines[30].strip()
+                sandbox = result_lines[31].strip()
+                exploration = result_lines[32].strip()
+                relaxing = result_lines[33].strip()
+                strategy = result_lines[34].strip()
+                towerdefense = result_lines[35].strip()
                 print("game:" + gameName)
                 print("ggLink:" + ggLink)
                 print("ofiPrice:" + ofiPrice)
@@ -116,9 +121,14 @@ def main_script():
                 print("openworld:" + openworld)
                 print("storyrich:" + storyrich)
                 print("adult:" + adult)
+                print("sandbox:" + sandbox)
+                print("exploration:" + exploration)
+                print("relaxing:" + relaxing)
+                print("strategy:" + strategy)
+                print("towerdefense:" + towerdefense)
                 if len(news) > 115:
                     news = news[:112] + "..."
-                listresult.write(gameName + ";" + ggLink + ";" + ofiPrice + ";" + keyPrice + ";" + hisPrice + ";" + xgp + ";" + gfn + ";" + steamlink + ";" + news[:115] + ";" + reviews + ";" + total_number_of_reviews + ";" + release_date + ";" + early + ";" + single + ";" + multi + ";" + coop + ";" + shooter + ";" + rpg + ";" + puzzle + ";" + platformer + ";" + driving + ";" + simulation + ";" + sports + ";" + rhythm + ";" + action + ";" + survival + ";" + adventure + ";" + openworld + ";" + storyrich + ";" + adult + "\n")
+                listresult.write(gameName + ";" + ggLink + ";" + ofiPrice + ";" + keyPrice + ";" + hisPrice + ";" + xgp + ";" + gfn + ";" + steamlink + ";" + news[:115] + ";" + reviews + ";" + total_number_of_reviews + ";" + release_date + ";" + early + ";" + single + ";" + multi + ";" + coop + ";" + shooter + ";" + rpg + ";" + puzzle + ";" + platformer + ";" + driving + ";" + simulation + ";" + sports + ";" + rhythm + ";" + action + ";" + survival + ";" + adventure + ";" + openworld + ";" + storyrich + ";" + adult + ";" + sandbox + ";" + exploration + ";" + relaxing + ";" + strategy + ";" + towerdefense + "\n")
             linecounter += 1
 
 # Retry mechanism
