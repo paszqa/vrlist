@@ -5,19 +5,7 @@ import os
 import time
 
 def main_script():
-    # Read JSON config
-    if exists("../../config.json"):
-        json_file = open("../../config.json")
-    elif exists("config.json"):
-        json_file = open("config.json")
-    elif exists("/home/pi/qbot2/config.json"):  # Custom path, ex. for crontab purposes
-        json_file = open("/home/pi/qbot2/config.json")
-    else:
-        print("No config.json found")
-        exit(2)
-    config = json.load(json_file)
     pathToScript = os.path.dirname(os.path.realpath(__file__))
-
     startline = 0
 
     with open(pathToScript + '/temp/lastline', 'r') as lastlinefile:
@@ -26,7 +14,7 @@ def main_script():
             lastlinefile.close()
             break
 
-    print("Startline:" + str(startline) + "\n")
+    print("[INFO] Startline:" + str(startline) + "\n")
 
     if startline < 2:
         listresult = open(pathToScript + '/output/listresult', 'w')
@@ -44,7 +32,7 @@ def main_script():
             lastlinewrite = open(pathToScript + '/temp/lastline', 'w')
             lastlinewrite.write(str(linecounter))
             lastlinewrite.close()
-            print("==================" + line.strip() + "===============")
+            print("==========" + line.strip() + "=========")
             # Remove leading and trailing whitespaces from each line
             game = line.split(";")[0]
             link = line.split(";")[1]
@@ -104,28 +92,7 @@ def main_script():
                 print("review count:" + total_number_of_reviews)
                 print("release:" + release_date)
                 print("early:" + early)
-                print("single:" + single)
-                print("multi:" + multi)
-                print("coop:" + coop)
-                print("shooter:" + shooter)
-                print("rpg:" + rpg)
-                print("puzzle:" + puzzle)
-                print("platformer:" + platformer)
-                print("driving:" + driving)
-                print("simulation:" + simulation)
-                print("sports:" + sports)
-                print("rhythm:" + rhythm)
-                print("action:" + action)
-                print("survival:" + survival)
-                print("adventure:" + adventure)
-                print("openworld:" + openworld)
-                print("storyrich:" + storyrich)
-                print("adult:" + adult)
-                print("sandbox:" + sandbox)
-                print("exploration:" + exploration)
-                print("relaxing:" + relaxing)
-                print("strategy:" + strategy)
-                print("towerdefense:" + towerdefense)
+                print("GENRES: "+single + ";" + multi + ";" + coop + ";" + shooter + ";" + rpg + ";" + puzzle + ";" + platformer + ";" + driving + ";" + simulation + ";" + sports + ";" + rhythm + ";" + action + ";" + survival + ";" + adventure + ";" + openworld + ";" + storyrich + ";" + adult + ";" + sandbox + ";" + exploration + ";" + relaxing + ";" + strategy + ";" + towerdefense) 
                 if len(news) > 115:
                     news = news[:112] + "..."
                 listresult.write(gameName + ";" + ggLink + ";" + ofiPrice + ";" + keyPrice + ";" + hisPrice + ";" + xgp + ";" + gfn + ";" + steamlink + ";" + news[:115] + ";" + reviews + ";" + total_number_of_reviews + ";" + release_date + ";" + early + ";" + single + ";" + multi + ";" + coop + ";" + shooter + ";" + rpg + ";" + puzzle + ";" + platformer + ";" + driving + ";" + simulation + ";" + sports + ";" + rhythm + ";" + action + ";" + survival + ";" + adventure + ";" + openworld + ";" + storyrich + ";" + adult + ";" + sandbox + ";" + exploration + ";" + relaxing + ";" + strategy + ";" + towerdefense + "\n")
@@ -136,9 +103,9 @@ if __name__ == "__main__":
     while True:
         try:
             main_script()
-            print("Script completed successfully.")
+            print("[SUCCESS] Script completed successfully.")
             break  # Exit the loop if the script completes successfully
         except Exception as e:
-            print(f"An error occurred: {e}")
-            print("Restarting script in 10 seconds...")
+            print(f"[ERROR] An error occurred: {e}")
+            print("[INFO] Restarting script in 10 seconds...")
             time.sleep(10)

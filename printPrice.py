@@ -1,12 +1,8 @@
 ####################################
-#
-# 'getPrice' module for qqBot by Paszq
 # 
-# a tool generating an image with details regarding current and historical game pricing
-# uses https://gg.deals to get pricing information
-# uses https://static.nvidiagrid.net - to check for GeforceNOW support
-# 
-#   v1.0.0      2022-03-22      Paszq       first version, based on standalone script
+#   v1.0.0      2024-07-31      Paszq       standalone script to scan GGDeals for VR games
+#                                           + scrape prices from GGDeals
+#                                           + scrape Steam Store for information about games
 #
 #####################################
 #Count execution time
@@ -26,59 +22,38 @@ import json #JSON read/write capability
 from os.path import exists
 import time
 
-
-#Read JSON config
-if exists("../../config.json"):
-    json_file = open("../../config.json")
-elif exists("config.json"):
-    json_file = open("config.json")
-elif exists("/home/pi/qbot2/config.json"):#Custom path, ex. for crontab purposes
-    json_file = open("/home/pi/qbot2/config.json")
-else:
-    print("No config.json found")
-    exit(2)
-config = json.load(json_file)
-
 #Basic vars
 pathToScript = os.path.dirname(os.path.realpath(__file__))
 prettyName = ""
 
 #Functions
 def getElementFromSite(site, elementName, elementAttributeName, elementAttribute):
-    print("Getting elements from the site: "+site)
-    
+    print("[INFO] Getting elements from the site: "+site)
     max_retries = 5
     retries = 0
     retry_delay = 5
     while retries < max_retries:
-        print("Retry "+str(retries))
+        print("[INFO] Attempt ID: "+str(retries))
         try:
             r = requests.get(site, allow_redirects=True)
             break;
         except requests.exceptions.RequestException as e:
-            print(f"============ERROR WHILE GETTING ELEMENTS FROM SITE URL "+site+ "\n")
+            print(f"[ERROR] Error while getting elements from site: "+site+ "\n")
             retries += 1
             if retries < max_retries:
                 fulldelay = retry_delay + retries * 5
-                print(f"Retrying in {fulldelay} seconds... (Attempt {retries + 1} of {max_retries})")
+                print(f"[INFO] Retrying in {fulldelay} seconds... (Attempt {retries + 1} of {max_retries})")
                 time.sleep(fulldelay)
             else:
-                print("Max retries reached. Exiting...")
+                print("[WARN] Max retries reached. Exiting...")
                 exit
     f = open(pathToScript+'/temp/temp.html', 'w+')
     f.write(str(r.content))
     f.close()
     html = open(pathToScript+'/temp/temp.html', encoding="utf8", errors='ignore')
     soup = BeautifulSoup(html, 'html.parser')
-    #print("Looking for "+elementName+" => "+elementAttributeName+" = "+elementAttribute)
     scoreGrade = soup.find_all("a", { "class" : "score-grade"})
-    print("LEN scoregrade:"+str(len(scoreGrade)))
     lines = soup.find_all(elementName, { elementAttributeName : elementAttribute}) + scoreGrade
-    print("LEN LINES:"+str(len(lines)))
-    #If not found get this:
-    #class="game-header-store-link badge badge-big"
-    #steam = 
-    #print(str(steam))
     return lines
 
 def getPrettyName(site):
@@ -94,7 +69,6 @@ def getPrettyName(site):
 
 
 def checkGamePass(inputLines):
-    print("Checking XGP...")
     if len(inputLines) > 0:
         gamePass = 0
         for line in inputLines:
@@ -108,7 +82,6 @@ def checkGamePass(inputLines):
         return "no"
 
 def checkGeforceNow(gameName):
-    print("Checking GFNow...")
     gameName = str(gameName).lower().replace(":","").replace("-"," ").replace("'","")
     #Old source - incomplete, doesn't include EA games
     #inputLines=str(subprocess.check_output("curl -s https://static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-en-US.json|jq '.[] .title'|tr -d '\"' ", shell=True)).split("\\n")
@@ -182,23 +155,20 @@ def check_steam_reviews(soup):
                     return total_reviews, user_reviews
             else:
                 if data_tooltip_html and "30 days" not in data_tooltip_html:
-                    #print("The value of data-tooltip-html is:", data_tooltip_html)
                     if len(data_tooltip_html.split(" of the ")) > 1:
                         total_reviews = data_tooltip_html.split(" of the ")[1].split(" ")[0].replace(",","").replace(".","")
                         user_reviews = data_tooltip_html.split(" ")[0]
                         return total_reviews, user_reviews
-        #else:
-        #    #print("Excluded div with data-tooltip-html containing '30 days'.")
     return "N/A", "N/A"
 
         
 def get_game_details(appid):
-    print("Getting game details for appid: "+appid+"...")
+    print("[INFO] Getting game details for appid: "+appid+"...")
     url = f'https://store.steampowered.com/api/appdetails?appids={appid}&l=english'
     reviewurl = f'https://store.steampowered.com/appreviews/{appid}?json=1&l=english'
     steamurl = f'https://store.steampowered.com/app/{appid}/'
-    print("...from URL:: "+url+"")
-    print("...reviews from URL:: "+reviewurl+"")
+    print("[INFO] ...from URL:: "+url+"")
+    print("[INFO] ...reviews from URL:: "+reviewurl+"")
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -212,7 +182,7 @@ def get_game_details(appid):
             metacritic_score = game_data.get('metacritic', {}).get('score', 'N/A')
             
         else:
-            print("1 Game not found.")
+            print("[WARN] Game not found.")
             return "N/A"
         
         response = requests.get(reviewurl)
@@ -221,7 +191,7 @@ def get_game_details(appid):
         if data['success']:
             game_data = data
             reviews_info = game_data.get('query_summary', {})
-            print(str(reviews_info))
+            print("[INFO] Reviews info: "+str(reviews_info))
             review_score_desc = reviews_info.get('review_score_desc', 'N/A')
             total_positive = reviews_info.get('total_positive', 'N/A')
             total_negative = reviews_info.get('total_negative', 'N/A')
@@ -231,16 +201,16 @@ def get_game_details(appid):
             user_review_score = f"{percent_positive}%"
             #return (str(user_review_score))
         else:
-            print("2 Game not found.")
+            print("[WARN] 2 Game not found.")
             return "N/A"
         return total_reviews, metacritic_score, user_review_score, release_date, total_number_of_reviews
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
+        print(f"[ERROR] An error occurred: {e}")
         return "N/A"
 
 
 def get_latest_game_news(appid):
-    print("Getting latest game news...")
+    print("[INFO] Getting latest game news...")
     url = f'http://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid={appid}&count=10&maxlength=300&l=english'
     try:
         #print("ABCCCCCC2222")
@@ -273,11 +243,11 @@ def get_latest_game_news(appid):
                 if formatted_news:
                     return str(', '.join(formatted_news))
                 else:
-                    print("No relevant news items found.")
+                    print("[WARN] No relevant news items found.")
         else:
-            print("Invalid response structure.")
+            print("[WARN] Invalid response structure.")
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
+        print(f"[ERROR] An error occurred: {e}")
 
 def get_redirect_target(url):
     try:
@@ -289,7 +259,7 @@ def get_redirect_target(url):
         return str(e)
 
 def fetch_page(url, max_retries, retry_delay):
-    print("=======Fetching Steam page from URL: "+url)
+    print("[INFO] Fetching Steam page from URL: "+url)
     retries = 0
     while retries < max_retries:
         try:
@@ -298,21 +268,20 @@ def fetch_page(url, max_retries, retry_delay):
             soup = BeautifulSoup(response.content, 'html.parser')
             return soup
         except requests.exceptions.RequestException as e:
-            print(f"============ERROR WHILE REQUESTING URL "+url+ "\n")
+            print(f"[ERROR] Error while requesting URL: "+url+ "\n")
             retries += 1
             if retries < max_retries:
                 fulldelay = retry_delay + retries * 5
-                print(f"Retrying in {fulldelay} seconds... (Attempt {retries + 1} of {max_retries})")
+                print(f"[INFO] Retrying in {fulldelay} seconds... (Attempt {retries + 1} of {max_retries})")
                 time.sleep(fulldelay)
             else:
-                print("Max retries reached. Exiting...")
+                print("[WARN] Max retries reached. Exiting...")
                 return None
                 
                 
 def printPrices(currentName, inputLines, siteurl):
-    print("Printing prices... currentName:"+currentName+"")
+    print("[INFO] Printing prices... currentName:"+currentName+"")
     #print("inputLines:"+str(inputLines))
-    print("len input lines:"+str(len(inputLines)))
     #print("siteurl:"+siteurl)
     if len(inputLines) > 0:
         inputLines = str(inputLines[:10]).replace('</a>','\n')
@@ -368,9 +337,9 @@ def printPrices(currentName, inputLines, siteurl):
                     #print("THIS LINE:\n\n\n"+str(line)+"\n\n\n")
                     if len(str(line).split('game-link-widget" href="')) > 1:
                         redirUrl = str(line).split('game-link-widget" href="')[1].split('"')[0]
-                        print("REDIR URL:\n"+redirUrl+"\n")
+                        print("[INFO] Redirect URL: "+redirUrl+"\n")
                         redirect_target = get_redirect_target(redirUrl)
-                        print("target:"+redirect_target)
+                        #print("target:"+redirect_target)
                         #redirect_target = get_redirect_target(url)
                         if len(redirect_target.split('store.steampowered.com/app/')) > 1:
                             steamId = redirect_target.split('store.steampowered.com/app/')[1].split('/')[0]
@@ -382,7 +351,7 @@ def printPrices(currentName, inputLines, siteurl):
                 details = get_game_details(steamId)
                 
                 #Get the site once to run rest of commands on results..
-                print("Getting the site to check for EA and tags...")
+                print("[INFO] Getting the site to check for EA and tags...")
                 if steamId != "":
                     url = f'https://store.steampowered.com/app/'+steamId+'/'
                     max_retries = 10
@@ -444,11 +413,11 @@ def printPrices(currentName, inputLines, siteurl):
                             user_reviews = details[2]
                             release_date = details[3]
                             total_number_of_reviews = details[4]
-                            print(str(total_reviews)+" // "+str(user_reviews)+" // "+str(total_number_of_reviews)+"\n")
+                            print("[INFO] Steam review results: "+str(total_reviews)+" // "+str(user_reviews)+" // "+str(total_number_of_reviews)+"\n")
                             steam_review_details = check_steam_reviews(soup)
                             total_reviews = steam_review_details[0]
                             user_reviews = steam_review_details[1]
-                            print("==>Steam user review count: "+total_reviews+"...score: "+user_reviews)
+                            print("[INFO] Steam user review count: "+total_reviews+"...score: "+user_reviews)
                             #if steam_review_details != "No user reviews":
                             #        if len(steam_review_details.split(" of the ")) > 1:
                             #            total_reviews = steam_review_details.split(" of the ")[1].split(" ")[0].replace(",","").replace(".","")
@@ -549,13 +518,12 @@ def printPrices(currentName, inputLines, siteurl):
         csv.write(relaxing+"\n")
         csv.write(strategy+"\n")
         csv.write(towerdefense)
-        print("Returning 0...")
         return 0
     else:
         return 1
 
 def getSimilarName(inputName):
-    print("Get similar name...")
+    print("[INFO] Getting similar name...")
     gameName=fixName(inputName)
     gameName = inputName.replace(" - ","-").replace("---","-").replace("-","+")
     siteurl='https://gg.deals/games/?title='+gameName
@@ -624,5 +592,5 @@ if printPrices(str(inputName), getElementFromSite(siteurl, "div", "id", "page"),
     prettyName = getSimilarName(str(inputName))[0]
     newName = getSimilarName(str(inputName))[1]
     siteurl = buildSiteUrl(newName)
-    print("\nSecond run?\n\n")
+    print("\n[WARN] Second run?\n")
     printPrices(prettyName, getElementFromSite(siteurl, "div", "id", "game-card"), siteurl)
